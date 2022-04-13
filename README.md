@@ -1,5 +1,10 @@
 # Gradientenbeton
 
+## Inhalt
+
+### Reduktionsfaktoren
+
+Berechnung von Masse-, Querschnitts- und Steifigkeitsreduktionsfaktoren von mit kugelförmigen Hohlkörpern gradierten Betondecken anhand einer Einheitszelle
 ## License
 
 Shield: [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
