@@ -62,6 +62,49 @@ def crossSection(r_x, h, D_hk, e):
     return A_brt, A_hk, A_net
 
 
+def shearCrossSection(d_s, D_hk, r_hk, d_OK, e):
+    """Wirksame Schubfläche am betrachteten Schnitt entlang x-Achse
+    :param d_s: Statische Nutzhöhe in cm
+    :param D_hk: Hohlkörperdurchmesser in cm
+    :param r_hk: Hohlkörperradius in cm
+    :param d_OK: obere Deckschicht in cm
+    :param e: Abstand Hohlkörper in Querrichtung in cm
+    :rtype A_brt_45: Bruttoquerschnitt im 45° Schnitt in cm^2
+    :rtype A_net_45: Nettoquerschnitt  im 45° Schnitt in cm^2
+    """
+    A_brt_45 = np.sqrt(2) * d_s * (D_hk + e)
+
+    # Für Definition der Geometrie siehe validierung/wirksame_Schubfläche.dwg
+    # Fall 1: Schwerachse Bewehrung unterhalb Schnittpunkt 45° Schnitt/Hohlkörper
+    if (d_OK + r_hk + np.sqrt(2)/2 * r_hk) <= d_s:
+        A_hk = np.pi * (D_hk / 2) ** 2
+
+    # Fall 2: Schwerachse Bewehrung oberhalb Schnittpunkt 45° Schnitt/Hohlkörper
+    elif d_OK + r_hk < d_s:
+        # Fläche des Hohlkörpers
+        A_hk = np.pi * (D_hk / 2) ** 2
+        # Abstand Schwerpunkt Hohlkörper zu Schwerachse Bewehrung
+        d_s_hk = d_s - d_OK - D_hk / 2
+        # Abstand Schwerpunkt Hohlkörper zu Schwerachse Bewehrung im 45° Schnitt
+        d_s_hk_45 = d_s_hk / np.cos(np.pi / 4)
+        # Höhe Ausschnitt Kreissegment unterhalb Schwerachse Bewehrung
+        h_ks_45 = (D_hk / 2) - d_s_hk_45
+        # Öffnungswinkel Kreissegment unterhalb Schwerachse Bewehrung
+        alpha = 2 * np.arccos(1 - h_ks_45 / (D_hk / 2))
+        # Fläche Kreissegment unterhalb Schwerachse Bewehrung
+        A_ks = (D_hk / 2) ** 2 / 2 * (alpha - np.sin(alpha))
+        # Querschnitt Hohlkörper oberhalb Schwerachse Bewehrung
+        A_hk = A_hk - A_ks
+
+    else:
+        print("Schwerachse untere Bewehrung liegt oberhalb Schwerachse Hohlkörper. \n")
+        print("Bitte Hohlkörperlayout prüfen. \n")
+
+    A_net_45 = A_brt_45 - A_hk
+
+    return A_brt_45, A_net_45
+
+
 def centerOfGravity(h, D_hk, d_OK, A_brt, A_hk, A_net):
     """Schwerpunkte am betrachteten Schnitt entlang x-Achse
     :param h: Deckenstärke in cm
@@ -165,6 +208,7 @@ def main():
     d_UK = getValidInput("Stärke der unteren Deckschicht in cm: ", 0, h-D_hk)
     e = getValidInput("Hohlkörperabstand in Querrichtung in cm: ", 0)
     rho = getValidInput("Rohdichte Beton in kg/m³: ", 0)
+    d_s = getValidInput("Statische Nutzhöhe in cm: ", 0)
 
     # Berechnung Geometrie
     # ----------------------
@@ -192,6 +236,16 @@ def main():
     print("A_net: "+"{:02.1f}".format(A_net,)+" cm^2")
     print("A_brt: "+"{:02.1f}".format(A_brt,)+" cm^2")
     print("Querschnittsreduktionsfaktor: "+"{:02.4f}".format(A_net/A_brt,))
+
+    # Wirksame Schubfläche
+    # ----------------------
+    # Berechung des Querschnittes an der schwächsten Stelle
+    A_brt_45, A_net_45 = shearCrossSection(d_s, D_hk, r_hk, d_OK, e)
+
+    print("\nWirksame Schubfläche\n----------------------")
+    print("A_net_45: "+"{:02.1f}".format(A_net_45,)+" cm^2")
+    print("A_brt_45: "+"{:02.1f}".format(A_brt_45,)+" cm^2")
+    print("Reduktionsfaktor Wirksame Schubfläche: "+"{:02.4f}".format(A_net_45/A_brt_45,))
 
     # Masse
     # ----------------------
