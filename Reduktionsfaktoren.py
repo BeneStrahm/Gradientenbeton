@@ -113,9 +113,9 @@ def centerOfGravity(h, D_hk, d_OK, A_brt, A_hk, A_net):
     :param A_brt: Bruttoquerschnitt in cm^2
     :param A_hk: Hohlkörperquerschnitt in cm^2
     :param A_net: Nettoquerschnitt in cm^2
-    :rtype zs_brt: Bruttoquerschnitt in cm
-    :rtype zs_hk: Hohlkörperquerschnitt in cm
-    :rtype zs_net: Nettoquerschnitt in cm
+    :rtype zs_brt: Schwerpunkt des Bruttoquerschnitts in cm
+    :rtype zs_hk: Schwerpunkt des Hohlkörperquerschnitts in cm
+    :rtype zs_net: Schwerpunkt des Nettoquerschnitts in cm
     """
     zs_brt = h / 2
     zs_hk = d_OK + D_hk / 2
@@ -132,12 +132,11 @@ def momentOfInertia(r_x, h, D_hk, e, A_brt, A_hk, zs_brt, zs_hk, zs_net):
     :param e: Abstand Hohlkörper in Querrichtung in cm
     :param A_brt: Bruttoquerschnitt in cm^2
     :param A_hk: Hohlkörperquerschnitt in cm^2
-    :param zs_brt: Bruttoquerschnitt in cm
-    :param zs_hk: Hohlkörperquerschnitt in cm
-    :param zs_net: Nettoquerschnitt in cm
-    :rtype I_brt: Bruttoquerschnitt in cm^4
-    :rtype I_hk: Hohlkörperquerschnitt in cm^4
-    :rtype I_net: Nettoquerschnitt in cm^4
+    :param zs_brt: Schwerpunkt des Bruttoquerschnitts in cm
+    :param zs_hk: Schwerpunkt des Hohlkörperquerschnitts in cm
+    :param zs_net: Schwerpunkt des Nettoquerschnitts in cm
+    :rtype I_brt: Flächenträgheitsmoment des Bruttoquerschnitt in cm^4
+    :rtype I_s_net: Flächenträgheitsmoment des Nettoquerschnittes in cm^4
     """
     # Flächenträgheitsmoment des Bruttoquerschnittes
     I_brt = (D_hk + e) * h ** 3 / 12
@@ -164,7 +163,21 @@ def integrandCrossSection(x, D_hk, e, h, d_OK):
     # Querschnittsflächen
     A_brt, A_hk, A_net = crossSection(r_x, h, D_hk, e)
 
-    return A_net  # I_brt, I_s_net
+    return A_net
+
+
+def integrandCenterOfGravity(x, D_hk, e, h, d_OK):
+    # Radius
+    r_x = radiusAtSection(D_hk, x, e)
+
+    # Querschnittsflächen
+    A_brt, A_hk, A_net = crossSection(r_x, h, D_hk, e)
+
+    # Schwerpunkte
+    zs_brt, zs_hk, zs_net = centerOfGravity(
+        h, D_hk, d_OK, A_brt, A_hk, A_net)
+
+    return zs_net
 
 
 def integrandMomentOfInertia(x, D_hk, e, h, d_OK):
@@ -182,7 +195,7 @@ def integrandMomentOfInertia(x, D_hk, e, h, d_OK):
     I_brt, I_s_net = momentOfInertia(
         r_x, h, D_hk, e, A_brt, A_hk, zs_brt, zs_hk, zs_net)
 
-    return I_s_net  # I_brt, I_s_net
+    return I_s_net
 
 
 def getValidInput(prompt, a=float('-inf'), b=float('inf')):
@@ -202,7 +215,7 @@ def getValidInput(prompt, a=float('-inf'), b=float('inf')):
 def main():
     # Eingabeparameter
     # ----------------------
-    print("Eingabeparameter\n----------------------")
+    print("\nEINGABEPARAMETER\n----------------------")
     h = getValidInput("Deckenstärke in cm: ", 0)
     D_hk = getValidInput("Hohlkörperdurchmesser in cm: ", 0, h)
     d_UK = getValidInput("Stärke der unteren Deckschicht in cm: ", 0, h-D_hk)
@@ -227,12 +240,14 @@ def main():
     a = 0                   # Obere Grenze
     b = r_hk + e/2          # Untere Grenze
 
+    print("\nQUERSCHNITTSWERTE AM SCHWÄCHSTEN QUERSCHNITT DER EINHEITSZELLE\n----------------------")
+
     # Querschnittsfläche
     # ----------------------
     # Berechung des Querschnittes an der schwächsten Stelle
     A_brt, A_hk, A_net = crossSection(r_hk, h, D_hk, e)
 
-    print("\nQuerschnittsfläche\n----------------------")
+    print("Querschnittsfläche\n-----------")
     print("A_net: "+"{:02.1f}".format(A_net,)+" cm^2")
     print("A_brt: "+"{:02.1f}".format(A_brt,)+" cm^2")
     print("Querschnittsreduktionsfaktor: "+"{:02.4f}".format(A_net/A_brt,))
@@ -242,14 +257,35 @@ def main():
     # Berechung des Querschnittes an der schwächsten Stelle
     A_brt_45, A_net_45 = shearCrossSection(d_s, D_hk, r_hk, d_OK, e)
 
-    print("\nWirksame Schubfläche\n----------------------")
+    print("\nWirksame Schubfläche\n-----------")
     print("A_net_45: "+"{:02.1f}".format(A_net_45,)+" cm^2")
     print("A_brt_45: "+"{:02.1f}".format(A_brt_45,)+" cm^2")
-    print("Reduktionsfaktor Wirksame Schubfläche: "+"{:02.4f}".format(A_net_45/A_brt_45,))
+    print("Reduktionsfaktor Wirksame Schubfläche: " +
+          "{:02.4f}".format(A_net_45/A_brt_45,))
+
+    # Schwerpunkt
+    # ----------------------
+    # Berechung des Schwerpunkts an der schwächsten Stelle
+    zs_brt, zs_hk, zs_net = centerOfGravity(h, D_hk, d_OK, A_brt, A_hk, A_net)
+
+    print("\nQuerschnittsschwerpunkt ab Oberkante\n-----------")
+    print("zs_net: "+"{:02.1f}".format(zs_net,)+" cm")
+
+    # Flächenträgheitsmoment
+    # ----------------------
+    # Berechung des Flächenträgheitsmoments an der schwächsten Stelle
+    I_brt, I_s_net = momentOfInertia(
+        r_hk, h, D_hk, e, A_brt, A_hk, zs_brt, zs_hk, zs_net)
+
+    print("\nFlächenträgheitsmoment\n-----------")
+    print("I_s_net: "+"{:02.1f}".format(I_s_net,)+" cm^4")
+    print("I_brt: "+"{:02.1f}".format(I_brt,)+" cm^4")
+
+    print("\nGEMITTELTE QUERSCHNITTSWERTE DER EINHEITSZELLE\n----------------------")
 
     # Masse
     # ----------------------
-    # Numerische Integration
+    # Numerische Integration zur Mittlung der Masse
     integral = quad(integrandCrossSection, a, b, args=(D_hk, e, h, d_OK))
     V_net = integral[0] * 2
     M_net = V_net * rho * 10 ** -6
@@ -259,14 +295,27 @@ def main():
     V_brt = A_brt * (b-a) * 2
     M_brt = V_brt * rho * 10 ** -6
 
-    print("\nMasse\n----------------------")
+    print("Masse\n-----------")
     print("M_net: "+"{:02.1f}".format(M_net,)+" kg")
     print("M_brt: "+"{:02.1f}".format(M_brt,)+" kg")
     print("Massensreduktionsfaktor: "+"{:02.4f}".format(M_net/M_brt,))
 
+    # Schwerpunkte
+    # ----------------------
+    # Numerische Integration zur Mittlung der Schwerpunkte
+    integral = quad(integrandCenterOfGravity, a, b, args=(D_hk, e, h, d_OK))
+    zs_net_int = integral[0]
+    error_estim = integral[1]
+
+    # Berechung des Mittelwertes über die betrachtete Länge
+    zs_net_m = zs_net_int / (b - a)
+
+    print("\nQuerschnittsschwerpunkt ab Oberkante\n-----------")
+    print("zs_net_m: "+"{:02.2f}".format(zs_net_m,)+" cm")
+
     # Flächenträgheitsmoment
     # ----------------------
-    # Numerische Integration
+    # Numerische Integration zur Mittlung des FLÄCHENTRÄGHEITSMOMENTS
     integral = quad(integrandMomentOfInertia, a, b, args=(D_hk, e, h, d_OK))
     I_s_net_int = integral[0]
     error_estim = integral[1]
@@ -277,10 +326,11 @@ def main():
     # Flächenträgheitsmoment Bruttoquerschnitt
     I_brt = (D_hk + e) * h ** 3 / 12
 
-    print("\nFlächenträgheitsmoment\n----------------------")
+    print("\nFlächenträgheitsmoment\n-----------")
     print("I_s_net_m: "+"{:02.1f}".format(I_s_net_m,)+" cm^4")
     print("I_brt: "+"{:02.1f}".format(I_brt,)+" cm^4")
-    print("Steifigkeitsreduktionsfaktor: "+"{:02.4f}".format(I_s_net_m/I_brt,))
+    print("Steifigkeitsreduktionsfaktor: " +
+          "{:02.4f}".format(I_s_net_m/I_brt,)+"\n")
 
 
 if __name__ == "__main__":
